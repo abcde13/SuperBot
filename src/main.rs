@@ -30,8 +30,8 @@ use std::env;
 fn main() {
 
 
-    let voice_channel  = "test";
-    let username = "JtotheC";
+    let YOUR_CHANNEL  = "test";
+    let YOUR_USERNAME = "JtotheC";
 
     let mut bot_in_channel = false;
     let mut channel_id: Option<ChannelId>= None;
@@ -84,7 +84,7 @@ fn main() {
     unsafe{
 
         // Start address for guessing
-        let mut addr = 0x20164e84;
+        let mut YOUR_ADDR = 0x20164e84;
 
 
         // Loop to check each address
@@ -147,7 +147,7 @@ fn main() {
                         Channel::Public(ref voice) if voice.kind == ChannelType::Voice => {
 
                             // Verify user and channel joined are the ones we desire
-                            if user.display_name() == username && voice.name == voice_channel {
+                            if user.display_name() == YOUR_USERNAME && voice.name == YOUR_CHANNEL {
                                 user_in_channel = !user_in_channel;
                                 println!("user_in_channel {}",user_in_channel);
                                 println!("user_in_game {}",user_in_game);
@@ -187,7 +187,7 @@ fn main() {
                 if presence.game.is_some() {
 
                     // Check if user and game are the ones we desire
-                    if user.display_name() == username && presence.game.expect("No game").name == "Rocket League" {
+                    if user.display_name() == YOUR_USERNAME && presence.game.expect("No game").name == "Rocket League" {
 
                         user_in_game = !user_in_game;
                         println!("user_in_channel {}",user_in_channel);

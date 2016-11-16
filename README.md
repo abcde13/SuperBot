@@ -32,31 +32,29 @@ to get your app setup with.
   4. Now comes the tough part. Currently, there is no way to pipoint the exact address Rocket League uses to store the
   value of how many goals your team has scored due to the nature of the Linux kernel (extra security measures compared
   to Windows, yay for most, nay for us right now). You'll need to do the following to (cross your fingers) get this working:
-      
-      a) Install a tool called [scanmem](https://github.com/scanmem/scanmem) or it's non-gui counterpart, GameConqueror.
+
+  &nbsp;&nbsp;&nbsp;&nbsp;1. Install a tool called [scanmem](https://github.com/scanmem/scanmem) or it's non-gui counterpart, GameConqueror.
       GameConqueror is supposed to be the CheatEngine for Linux. We can do `sudo-apt-get install scanmem gameconqueror` or
       follow the instructions in the link for scanmem.
 
-      b) Run Rocket League, and attach scanmem to the process pid of RocketLeague (can be found by using `pgrep RocketLeague`),
+  &nbsp;&nbsp;&nbsp;&nbsp;2. Run Rocket League, and attach scanmem to the process pid of RocketLeague (can be found by using `pgrep RocketLeague`),
       by typing (in a new terminal tab) `scanmem` followed by `pid YOUR PID`. If using GameConqueror, use the little "Select
       a process" tool to do that.
 
-      c) Now, in Rocket League, start an exhibition match and score a goal for your team. Now, go back to scanmem or GameConqueror
+  &nbsp;&nbsp;&nbsp;&nbsp;3. Now, in Rocket League, start an exhibition match and score a goal for your team. Now, go back to scanmem or GameConqueror
       and type in `1` and hit enter (or scan). The first search will take a while, because it has to search through most of the memory
       space for this number. You'll end up with a large number of hits (at least a million, I thinkg).
 
-      d) Repeat c) until you have between 5 to 40 matches. Every time you score a goal, type in the number that matches the goals your team has. 
+  &nbsp;&nbsp;&nbsp;&nbsp;4. Repeat c) until you have between 5 to 40 matches. Every time you score a goal, type in the number that matches the goals your team has. 
 
-      e) Pick an address that is near the top of the list (smaller address). Don't pick the top, just . . . near it. Copy that address.
+  &nbsp;&nbsp;&nbsp;&nbsp;5. Pick an address that is near the top of the list (smaller address). Don't pick the top, just . . . near it. Copy that address.
 
   5. Back here. Go to the folder where you cloned this bot. Now, you have two options (IN WORKS). You can either go into src/main.rs, 
   find where the `START_ADDR` is specified, and paste your address here, or you can run `cargo run YOUR_USERNAME YOUR_CHANNEL YOUR_ADDR`, passing it in as a 
   command line argument (only first one works as of now).
-
   6. Run the bot (making sure you have cargo and rust installed) with `cargo run YOUR_USERNAME YOUR CHANNEL`. `YOUR_USERNAME` = your username on Discord, and
   `YOUR_CHANNEL` = the name of the voice channel you want the bot to join. Now the bot will only join the Discord voice channel once you join the channel *and*
   when you start playing Rocket League. **Make sure you enable Discord's ability to track what game you are currently playing**.
-
   7. **TODO** Store the mp3 files of the sounds you want SuperBot to play in the folder named "music".
 
 
