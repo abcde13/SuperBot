@@ -50,9 +50,9 @@ to get your app setup with.
   &nbsp;&nbsp;&nbsp;&nbsp;5. Pick an address that is near the top of the list (smaller address). Don't pick the top, just . . . near it. Copy that address.
 
   5. Back here. Go to the folder where you cloned this bot. Now, you have two options (IN WORKS). You can either go into src/main.rs, 
-  find where the `START_ADDR` is specified, and paste your address here, or you can run `cargo run YOUR_USERNAME YOUR_CHANNEL YOUR_ADDR`, passing it in as a 
+  find where the `START_ADDR` is specified, and paste your address here, or you can run `sudo cargo run YOUR_USERNAME YOUR_CHANNEL YOUR_ADDR`, passing it in as a 
   command line argument (only first one works as of now).
-  6. Run the bot (making sure you have cargo and rust installed) with `cargo run YOUR_USERNAME YOUR CHANNEL`. `YOUR_USERNAME` = your username on Discord, and
+  6. Run the bot (making sure you have cargo and rust installed) with `sudo cargo run YOUR_USERNAME YOUR CHANNEL`. `YOUR_USERNAME` = your username on Discord, and
   `YOUR_CHANNEL` = the name of the voice channel you want the bot to join. Now the bot will only join the Discord voice channel once you join the channel *and*
   when you start playing Rocket League. **Make sure you enable Discord's ability to track what game you are currently playing**.
   7. **TODO** Store the mp3 files of the sounds you want SuperBot to play in the folder named "music".
