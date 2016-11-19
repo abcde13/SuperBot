@@ -193,44 +193,7 @@ fn dispatch_on_event(discord: &Discord, connection: &mut Connection) {
         Ok(Event::VoiceStateUpdate(server_opt, voice_state)) => voice_channel_update_event(discord, connection, &server_opt, &voice_state, discord_info, &mut discord_state),
 
         // Presence includes change of game state for users
-        Ok(Event::PresenceUpdate{presence, server_id, roles}) => {
-
-            let user = discord.get_member(server_id.expect("No Server"), presence.user_id).unwrap();
-            let server = server_id;
-
-            println!("Presence changed of: {}", presence.user_id);
-
-            if presence.game.is_some() {
-
-                // Check if user and game are the ones we desire
-                if user.display_name() == username && presence.game.expect("No game").name == "Rocket League" {
-
-                    *discord_state.user_in_game = !*discord_state.user_in_game;
-                    println!("user_in_channel {}", *discord_state.user_in_channel);
-                    println!("user_in_game {}", *discord_state.user_in_game);
-
-                }
-
-                // Same as above
-                if *discord_state.user_in_game && *discord_state.user_in_channel && !*discord_state.bot_in_channel {
-
-                    let voice = Some(connection.voice(server));
-
-                    match *discord_state.channel_id {
-                        Some(id) => {
-                            println!("Joining");
-                            voice.map(|v| v.connect(id));
-                            *discord_state.bot_in_channel = true;
-                        }
-                        None => println!("Never found channel id")
-                    }
-                }
-            } else {
-
-                *discord_state.user_in_game = false;
-
-            }
-        },
+        Ok(Event::PresenceUpdate{presence, server_id, roles}) => game_state_update(discord, connection, presence, &server_id, &roles, discord_info, &mut discord_state),
         Ok(_) => {}
         Err(discord::Error::Closed(code, body)) => {
             println!("Gateway closed on us with code {:?}: {}", code, body);
@@ -284,7 +247,8 @@ fn voice_channel_update_event(discord: &Discord, connection: &mut Connection, se
     }
 }
 
-fn game_state_update(discord: &Discord, connection: &mut Connection, presence: Presence, server_id: Option<ServerId>, roles: Option<Vec<RoleId>>, info: DiscordInfo, state: &mut DiscordState) {
+/// Event dispatch for when state of game changes.
+fn game_state_update(discord: &Discord, connection: &mut Connection, presence: Presence, server_id: &Option<ServerId>, roles: &Option<Vec<RoleId>>, info: DiscordInfo, state: &mut DiscordState) {
     let user = discord.get_member(server_id.expect("No Server"), presence.user_id).unwrap();
     let server = server_id;
 
@@ -304,7 +268,7 @@ fn game_state_update(discord: &Discord, connection: &mut Connection, presence: P
         // Same as above
         if *state.user_in_game && *state.user_in_channel && !*state.bot_in_channel {
 
-            let voice = Some(connection.voice(server));
+            let voice = Some(connection.voice(*server));
 
             match *state.channel_id {
                 Some(id) => {
