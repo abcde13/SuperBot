@@ -193,7 +193,7 @@ fn dispatch_on_event(discord: &Discord, connection: &mut Connection) {
         Ok(Event::VoiceStateUpdate(server_opt, voice_state)) => voice_channel_update_event(discord, connection, &server_opt, &voice_state, discord_info, &mut discord_state),
 
         // Presence includes change of game state for users
-        Ok(Event::PresenceUpdate{presence, server_id, roles}) => game_state_update(discord, connection, presence, &server_id, &roles, discord_info, &mut discord_state),
+        Ok(Event::PresenceUpdate{presence, server_id, roles}) => game_state_update_event(discord, connection, presence, &server_id, &roles, discord_info, &mut discord_state),
         Ok(_) => {}
         Err(discord::Error::Closed(code, body)) => {
             println!("Gateway closed on us with code {:?}: {}", code, body);
@@ -248,7 +248,7 @@ fn voice_channel_update_event(discord: &Discord, connection: &mut Connection, se
 }
 
 /// Event dispatch for when state of game changes.
-fn game_state_update(discord: &Discord, connection: &mut Connection, presence: Presence, server_id: &Option<ServerId>, roles: &Option<Vec<RoleId>>, info: DiscordInfo, state: &mut DiscordState) {
+fn game_state_update_event(discord: &Discord, connection: &mut Connection, presence: Presence, server_id: &Option<ServerId>, roles: &Option<Vec<RoleId>>, info: DiscordInfo, state: &mut DiscordState) {
     let user = discord.get_member(server_id.expect("No Server"), presence.user_id).unwrap();
     let server = server_id;
 
