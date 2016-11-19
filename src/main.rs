@@ -285,3 +285,20 @@ fn game_state_update_event(discord: &Discord, connection: &mut Connection, prese
 
     }
 }
+
+fn check_state_and_join_channel(connection: &mut Connection, server: &Option<ServerId>, state: &mut DiscordState) {
+    let in_game_in_channel_bot_not_in_channel = *state.user_in_game && *state.user_in_channel && !*state.bot_in_channel;
+
+    if in_game_in_channel_bot_not_in_channel {
+
+        let voice = Some(connection.voice(*server));
+        match *state.channel_id {
+            Some(id) => {
+                println!("Joining");
+                voice.map(|v| v.connect(id));
+                *state.bot_in_channel = true;
+            }
+            None => println!("Never found channel id")
+        }
+    }
+}
