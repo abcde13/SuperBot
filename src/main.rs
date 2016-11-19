@@ -217,28 +217,16 @@ fn voice_channel_update_event(discord: &Discord, connection: &mut Connection, se
 
             Channel::Public(ref voice) if voice.kind == ChannelType::Voice => {
 
-                // Verify user and channel joined are the ones we desire
-                if user.display_name() == info.username && voice.name == info.channel {
+                let name_and_channel_match = user.display_name() == info.username && voice.name == info.channel;
+
+                if  name_and_channel_match {
                     *state.user_in_channel = !*state.user_in_channel;
                     println!("user_in_channel {}", state.user_in_channel);
                     println!("user_in_game {}", state.user_in_game);
                     *state.channel_id = voice_state.channel_id;
                 }
 
-                // If conditions are met, bot joines voice channel to
-                if *state.user_in_game && *state.user_in_channel && !*state.bot_in_channel {
-
-                    let voice = Some(connection.voice(*server));
-
-                    match *state.channel_id {
-                        Some(id) => {
-                            println!("Joining");
-                            voice.map(|v| v.connect(id));
-                            *state.bot_in_channel = true;
-                        }
-                        None => println!("Never found channel id")
-                    }
-                }
+                check_state_and_join_channel(connection, server, state);
             }
             _ => println!("Not a voice channel")
         }
@@ -256,8 +244,9 @@ fn game_state_update_event(discord: &Discord, connection: &mut Connection, prese
 
     if presence.game.is_some() {
 
-        // Check if user and game are the ones we desire
-        if user.display_name() == info.username && presence.game.expect("No game").name == "Rocket League" {
+        let name_match_and_playing_game = user.display_name() == info.username && presence.game.expect("No game").name == "Rocket League";
+
+        if  name_match_and_playing_game {
 
             *state.user_in_game = !*state.user_in_game;
             println!("user_in_channel {}", *state.user_in_channel);
@@ -265,20 +254,8 @@ fn game_state_update_event(discord: &Discord, connection: &mut Connection, prese
 
         }
 
-        // Same as above
-        if *state.user_in_game && *state.user_in_channel && !*state.bot_in_channel {
+        check_state_and_join_channel(connection, server, state);
 
-            let voice = Some(connection.voice(*server));
-
-            match *state.channel_id {
-                Some(id) => {
-                    println!("Joining");
-                    voice.map(|v| v.connect(id));
-                    *state.bot_in_channel = true;
-                }
-                None => println!("Never found channel id")
-            }
-        }
     } else {
 
         *state.user_in_game = false;
@@ -286,6 +263,7 @@ fn game_state_update_event(discord: &Discord, connection: &mut Connection, prese
     }
 }
 
+/// Verifies desired state and has bot take action.
 fn check_state_and_join_channel(connection: &mut Connection, server: &Option<ServerId>, state: &mut DiscordState) {
     let in_game_in_channel_bot_not_in_channel = *state.user_in_game && *state.user_in_channel && !*state.bot_in_channel;
 
