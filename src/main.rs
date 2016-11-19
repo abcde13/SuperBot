@@ -30,15 +30,11 @@ use std::io::Write;
 use std::collections::HashMap;
 use std::time::Duration;
 
-// fails, PR already open #35897 
-//const VOICE_CHANNEL: &  str =  "test";
-//const USERNAME: &  str = "JtotheC";
-
 fn main() {
 
 
-    let YOUR_CHANNEL  = "test";
-    let YOUR_USERNAME = "JtotheC";
+    let YOUR_CHANNEL: &str = &env::var("DISCORD_CHANNEL").unwrap();
+    let YOUR_USERNAME: &str  = &env::var("DISCORD_NAME").unwrap();
 
     let mut bot_in_channel = false;
     let mut channel_id: Option<ChannelId>= None;
@@ -51,6 +47,8 @@ fn main() {
 
    
     
+    println!("{:?}",&env::var("DISCORD_NAME"));
+    println!("{:?}",&env::var("DISCORD_CHANNEL"));
     println!("{:?}",&env::var("DISCORD_TOKEN"));
 
     // Log in to Discord using a bot token from the environment
