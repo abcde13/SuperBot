@@ -15,6 +15,8 @@ use discord::model::User;
 use discord::model::ChannelId;
 use discord::model::ServerId;
 use discord::model::VoiceState;
+use discord::model::Presence;
+use discord::model::RoleId;
 use std::process::Command;
 use libc::*;
 use std::str;
@@ -279,5 +281,43 @@ fn voice_channel_update_event(discord: &Discord, connection: &mut Connection, se
         }
     } else {
         *state.user_in_channel = false;
+    }
+}
+
+fn game_state_update(discord: &Discord, connection: &mut Connection, presence: Presence, server_id: Option<ServerId>, roles: Option<Vec<RoleId>>, info: DiscordInfo, state: &mut DiscordState) {
+    let user = discord.get_member(server_id.expect("No Server"), presence.user_id).unwrap();
+    let server = server_id;
+
+    println!("Presence changed of: {}", presence.user_id);
+
+    if presence.game.is_some() {
+
+        // Check if user and game are the ones we desire
+        if user.display_name() == info.username && presence.game.expect("No game").name == "Rocket League" {
+
+            *state.user_in_game = !*state.user_in_game;
+            println!("user_in_channel {}", *state.user_in_channel);
+            println!("user_in_game {}", *state.user_in_game);
+
+        }
+
+        // Same as above
+        if *state.user_in_game && *state.user_in_channel && !*state.bot_in_channel {
+
+            let voice = Some(connection.voice(server));
+
+            match *state.channel_id {
+                Some(id) => {
+                    println!("Joining");
+                    voice.map(|v| v.connect(id));
+                    *state.bot_in_channel = true;
+                }
+                None => println!("Never found channel id")
+            }
+        }
+    } else {
+
+        *state.user_in_game = false;
+
     }
 }
