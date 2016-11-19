@@ -1,7 +1,5 @@
 
-extern crate discord;
-extern crate libc;
-#[macro_use]
+extern crate discord; extern crate libc; #[macro_use]
 extern crate log;
 
 
@@ -61,121 +59,124 @@ fn main() {
     let (mut connection, _) = discord.connect().expect("connect failed");
     println!("Ready.");
     loop {
+        println!("looping {}",start_search);
 
+        if(!start_search) { 
         // Match against incoming events
-        match connection.recv_event() {
-            
-            // Event when something happens on a voice channel
-            Ok(Event::VoiceStateUpdate(server_opt,voice_state)) => {
+            match connection.recv_event() {
+                
+                // Event when something happens on a voice channel
+                Ok(Event::VoiceStateUpdate(server_opt,voice_state)) => {
 
-                println!("Got voice update: {:?},{:?}",server_opt,voice_state.channel_id);
+                    println!("Got voice update: {:?},{:?}",server_opt,voice_state.channel_id);
 
-                if server_opt.is_some() && voice_state.channel_id.is_some() {
+                    if server_opt.is_some() && voice_state.channel_id.is_some() {
 
-                    let server = server_opt;
-                    let user = discord.get_member(server_opt.expect("No Server"),voice_state.user_id).unwrap();
-                    let channel: Channel = discord.get_channel(voice_state.channel_id.expect("No Channel")).unwrap();
+                        let server = server_opt;
+                        let user = discord.get_member(server_opt.expect("No Server"),voice_state.user_id).unwrap();
+                        let channel: Channel = discord.get_channel(voice_state.channel_id.expect("No Channel")).unwrap();
 
-                    match channel {
+                        match channel {
 
-                        Channel::Public(ref voice) if voice.kind == ChannelType::Voice => {
+                            Channel::Public(ref voice) if voice.kind == ChannelType::Voice => {
 
-                            // Verify user and channel joined are the ones we desire
-                            if user.display_name() == YOUR_USERNAME && voice.name == YOUR_CHANNEL {
-                                user_in_channel = !user_in_channel;
-                                println!("user_in_channel {}",user_in_channel);
-                                println!("user_in_game {}",user_in_game);
-                                channel_id = voice_state.channel_id;
-                            }
+                                // Verify user and channel joined are the ones we desire
+                                if user.display_name() == YOUR_USERNAME && voice.name == YOUR_CHANNEL {
+                                    user_in_channel = !user_in_channel;
+                                    println!("user_in_channel {}",user_in_channel);
+                                    println!("user_in_game {}",user_in_game);
+                                    channel_id = voice_state.channel_id;
+                                }
 
-                            // If conditions are met, bot joines voice channel to
-                            if user_in_game && user_in_channel && !bot_in_channel {
+                                // If conditions are met, bot joines voice channel to
+                                if user_in_game && user_in_channel && !bot_in_channel {
 
-                                let voice = Some(connection.voice(server));
+                                    let voice = Some(connection.voice(server));
 
-                                match channel_id {
-                                    Some(id) => {
-                                        println!("Joining");
-                                        voice.map(|v| v.connect(id));
-                                        bot_in_channel = true;
-                                        start_search = true;
+                                    match channel_id {
+                                        Some(id) => {
+                                            println!("Joining");
+                                            voice.map(|v| v.connect(id));
+                                            bot_in_channel = true;
+                                            start_search = true;
+                                        }
+                                        None => println!("Never found channel id")
                                     }
-                                    None => println!("Never found channel id")
                                 }
                             }
+                            _ => println!("Not a voice channel")
                         }
-                        _ => println!("Not a voice channel")
+                    } else {
+                        user_in_channel = false;
                     }
-                } else {
-                    user_in_channel = false;
-                }
-            },
+                },
 
-            // Presence includes change of game state for users
-            Ok(Event::PresenceUpdate{presence,server_id,roles}) => {
+                // Presence includes change of game state for users
+                Ok(Event::PresenceUpdate{presence,server_id,roles}) => {
 
-                let user = discord.get_member(server_id.expect("No Server"),presence.user_id).unwrap();
-                let server = server_id;
+                    let user = discord.get_member(server_id.expect("No Server"),presence.user_id).unwrap();
+                    let server = server_id;
 
-                println!("Presence changed of: {}",presence.user_id);
+                    println!("Presence changed of: {}",presence.user_id);
 
-                if presence.game.is_some() {
+                    if presence.game.is_some() {
 
-                    // Check if user and game are the ones we desire
-                    if user.display_name() == YOUR_USERNAME && presence.game.expect("No game").name == "Rocket League" {
+                        // Check if user and game are the ones we desire
+                        if user.display_name() == YOUR_USERNAME && presence.game.expect("No game").name == "Rocket League" {
 
-                        user_in_game = !user_in_game;
-                        println!("user_in_channel {}",user_in_channel);
-                        println!("user_in_game {}",user_in_game);
+                            user_in_game = !user_in_game;
+                            println!("user_in_channel {}",user_in_channel);
+                            println!("user_in_game {}",user_in_game);
 
-                    }
+                        }
 
-                    // Same as above
-                    if user_in_game && user_in_channel && !bot_in_channel {
+                        // Same as above
+                        if user_in_game && user_in_channel && !bot_in_channel {
 
-                        let voice = Some(connection.voice(server));
+                            let voice = Some(connection.voice(server));
 
-                        match channel_id {
-                            Some(id) => {
-                                println!("Joining");
-                                voice.map(|v| v.connect(id));
-                                bot_in_channel = true;
-                                start_search = true;
+                            match channel_id {
+                                Some(id) => {
+                                    println!("Joining");
+                                    voice.map(|v| v.connect(id));
+                                    bot_in_channel = true;
+                                    start_search = true;
 
-                                let output = Command::new("pgrep")
-                                                      .arg("RocketLeague")
-                                                      .output()
-                                                      .expect("where's the PID?");
+                                    let output = Command::new("pgrep")
+                                                          .arg("RocketLeague")
+                                                          .output()
+                                                          .expect("where's the PID?");
 
-                                // Grap pid from pgrep
-                                let mut tmp_pid: String = String::from_utf8(output.stdout).unwrap();
+                                    // Grap pid from pgrep
+                                    let mut tmp_pid: String = String::from_utf8(output.stdout).unwrap();
 
-                                let tmp_pid_len = tmp_pid.len();
+                                    let tmp_pid_len = tmp_pid.len();
 
-                                // Grabbing from stdout introduces a \n character at the end, so truncate
-                                tmp_pid.truncate(tmp_pid_len-1);
+                                    // Grabbing from stdout introduces a \n character at the end, so truncate
+                                    tmp_pid.truncate(tmp_pid_len-1);
 
-                                // Cast from String to an int (signed, 32 bit)
-                                pid = tmp_pid.parse::<i32>().unwrap();
+                                    // Cast from String to an int (signed, 32 bit)
+                                    pid = tmp_pid.parse::<i32>().unwrap();
+                                }
+                                None => println!("Never found channel id")
                             }
-                            None => println!("Never found channel id")
                         }
+                    } else {
+
+                        user_in_game = false;
+
                     }
-                } else {
-
-                    user_in_game = false;
-
-                }
-            },
-            Ok(_) => {}
-            Err(discord::Error::Closed(code, body)) => {
-                println!("Gateway closed on us with code {:?}: {}", code, body);
-                break
-            },
-            Err(err) => println!("Receive error: {:?}", err)
+                },
+                Ok(_) => {}
+                Err(discord::Error::Closed(code, body)) => {
+                    println!("Gateway closed on us with code {:?}: {}", code, body);
+                    break
+                },
+                Err(err) => println!("Receive error: {:?}", err)
+            }
         }
 
-        if(start_search){
+        else {
             /* Commented out code below is for reading the value at
              * a certain address to ascertain the number of goals
              * currently scored by your team.
@@ -212,10 +213,10 @@ fn main() {
 
                 let mut first_run = true;
 
-                let mut count = 0;
+                let mut count = 0u32;
 
                 // Loop to check each address
-                for x in 0..1000000{
+                for x in 0..10000000 {
 
                     addr = addr + 1;
                     let mut value: u32 = mem::uninitialized();
@@ -236,11 +237,11 @@ fn main() {
 
                     
 
-                    if (val != u32::max_value() && val+1 == value){
-                        println!("We have a goal? {}",addr);
+                    if val != u32::max_value() && val+1 == value{
+                        //println!("We have a goal? {}",addr);
                         possible_addrs.entry(addr).or_insert(value);
                         count = count + 1;
-                    }
+                    } 
 
                     // Comment back in when debugging. Pipe to file for better viewing
                      
@@ -249,14 +250,15 @@ fn main() {
                     //println!("read: {}",read );
                     
 
-                }
-                io::stdout().flush().unwrap();
+                } 
+                //io::stdout().flush().unwrap();
                 println!("addr: {:#x}",addr );
                 println!("count: {}",count);
 
                 first_run = false;
 
             };
+            io::stdout().flush();
         }
 
 
