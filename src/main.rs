@@ -69,12 +69,14 @@ fn main() {
     let discord = log_into_discord(YOUR_TOKEN);
     let (mut connection, _) = discord.connect().expect("connect failed");
 
+    let mut discord_closure  = || dispatch_on_event(&discord, &mut connection);
+
     println!("Ready.");
     loop {
         println!("looping {}",start_search);
 
         if !start_search { 
-            dispatch_on_event(&discord, &mut connection);
+            discord_closure();
         }
 
         else {
