@@ -1,0 +1,24 @@
+
+// This is merely a place for notes about possible addresses, pointers, etc.
+
+
+Nov 19, 2016 9:15 am PST Joraaver
+
+Found that there is only 1 address that is written to when the #
+of goals scored actually changes. Therefore, we can't use a "list" of addresses
+as previously thought. We'll have to try and reverse engineer the pointer.
+
+Today's experimenting, that address is 0x2d35828c
+
+
+Nov 20, 2016 3:55 pm PST Joraaver
+
+Address is 0x2cc42d5c
+
+Found basic loop of gamestate. Know that it writes to r15 the above address.
+Need to figure out when r15 is written to with that address, or where 
+this address is being stored or pointed to.
+
+
+
+

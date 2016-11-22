@@ -91,12 +91,6 @@ fn main() {
             //let mut voice: Option< &mut VoiceConnection> = None;
             //
 
-            /* list of possible address
-             *
-             * 0x5c45ce
-             * 0x5d924b0,
-             * 0x201386f4
-             * */
 
             /* Retrieving PID of Rocket League.
              * Technically should be done when discord has detected that Rocket League
