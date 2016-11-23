@@ -51,6 +51,8 @@ struct DiscordState<'a> {
     user_in_game: &'a mut bool,
 }
 
+            
+
 fn main() {
 
     //Setting token from environment variable
@@ -61,7 +63,7 @@ fn main() {
 
     //Declarations for address search
     let mut pid: pid_t = -1;
-    let mut possible_addrs: HashMap<i32,u32> = HashMap::new();
+    let mut possible_addrs: &mut HashMap<i32,i32> = &mut HashMap::new();
 
     //Start search hotfix variable
     let mut start_search = false;
@@ -71,97 +73,16 @@ fn main() {
 
     let mut discord_closure  = || dispatch_on_event(&discord, &mut connection);
 
+    let mut rl_score_closure = || rl_score_check(0x2cc42d5c, possible_addrs, pid);
+
     println!("Ready.");
     loop {
         println!("looping {}",start_search);
 
         if !start_search { 
             discord_closure();
-        }
-
-        else {
-            /* Commented out code below is for reading the value at
-             * a certain address to ascertain the number of goals
-             * currently scored by your team.
-             * Procedure for now will required storing some 100,000 values
-             * in a hash, and trimming those down to about 15 (hopefully).
-             *
-             * If 15 of the values at certain addresses increment by 1, that is
-             * (again hopefully) enough to determine that your team scored a goal
-             */
-
-            //let mut voice: Option< &mut VoiceConnection> = None;
-            //
-
-            /* list of possible address
-             *
-             * 0x5c45ce
-             * 0x5d924b0,
-             * 0x201386f4
-             * */
-
-            /* Retrieving PID of Rocket League.
-             * Technically should be done when discord has detected that Rocket League
-             * has started, but here for now for debugging and testing. Still needs
-             * Rocket League running first to work though.
-             * */
-
-
-            unsafe{
-
-                // Start address for guessing
-                let mut YOUR_ADDR = 0x2a41dc95;
-
-                let mut addr = YOUR_ADDR;
-
-                let mut first_run = true;
-
-                let mut count = 0u32;
-
-                // Loop to check each address
-                for x in 0..10000000 {
-
-                    addr = addr + 1;
-                    let mut value: u32 = mem::uninitialized();
-                    let local_iov = iovec {
-                    iov_base: &mut value as *mut _ as *mut c_void,
-                    iov_len: mem::size_of::<u32>(),
-                    };
-                    let remote_iov = iovec {
-                    iov_base: addr as *mut c_void,
-                    iov_len: mem::size_of::<u32>(),
-                    };
-
-
-                    let read = process_vm_readv(pid, &local_iov, 1, &remote_iov, 1, 0);
-
-                    let &mut val = possible_addrs.entry(addr).or_insert(value);
-
-
-                    
-
-                    if val != u32::max_value() && val+1 == value{
-                        //println!("We have a goal? {}",addr);
-                        possible_addrs.entry(addr).or_insert(value);
-                        count = count + 1;
-                    } 
-
-                    // Comment back in when debugging. Pipe to file for better viewing
-                     
-                    //println!("addr: {:#x}",addr );
-                    //println!("value: {}",value );
-                    //println!("read: {}",read );
-                    
-
-                } 
-                //io::stdout().flush().unwrap();
-                println!("addr: {:#x}",addr );
-                println!("count: {}",count);
-
-                first_run = false;
-
-            };
-            io::stdout().flush();
+        } else {
+            rl_score_closure();
         }
 
 
@@ -170,6 +91,19 @@ fn main() {
 
 }
 
+/// Fetch pid of Rocket League
+fn fetch_rl_pid(pid: pid_t) -> pid_t{
+
+    let output = Command::new("pgrep")
+        .arg("RocketLeague")
+        .output()
+        .expect("where'sthe PID?");
+     let mut tmp_pid: String = String::from_utf8(output.stdout).unwrap();
+     let tmp_pid_len = tmp_pid.len();
+     tmp_pid.truncate(tmp_pid_len-1);
+     tmp_pid.parse::<i32>().unwrap()
+}
+ 
 /// Function takes in bot token and logs into discord; returning a session object.
 fn log_into_discord(token: &str) -> Discord {
     Discord::from_bot_token(token).expect("login failed")
@@ -290,4 +224,58 @@ fn check_state_and_join_channel(connection: &mut Connection, server: &Option<Ser
             None => println!("Never found channel id")
         }
     }
+}
+
+/// Loop to check score in Rocket League
+fn rl_score_check(start_addr: i32, addrs_map: & mut HashMap<i32,i32>, mut pid: pid_t) {
+
+    if(pid == -1){
+        pid = fetch_rl_pid(pid);
+    }
+
+    unsafe{
+
+        // Start address for guessing
+        let mut addr = start_addr;
+
+        let mut count = 0u32;
+
+        // Loop to check each address
+        for x in 0..100000 {
+
+            addr = addr + 1;
+            let mut value:i32 = mem::uninitialized();
+            let local_iov = iovec {
+            iov_base: &mut value as *mut _ as *mut c_void,
+            iov_len: mem::size_of::<i32>(),
+            };
+            let remote_iov = iovec {
+            iov_base: addr as *mut c_void,
+            iov_len: mem::size_of::<i32>(),
+            };
+
+            let read = process_vm_readv(pid, &local_iov, 1, &remote_iov, 1, 0);
+
+            let  val = *addrs_map.entry(addr).or_insert(value);
+
+            if val != i32::max_value() && val+1 == value{
+                //println!("We have a goal? {}",addr);
+                *addrs_map.entry(addr).or_insert(value);
+                count = count + 1;
+            } 
+
+            // Comment back in when debugging. Pipe to file for better viewing
+             
+            //println!("addr: {:#x}",addr );
+            //println!("value: {}",value );
+            //println!("read: {}",read );
+            
+
+        } 
+        //io::stdout().flush().unwrap();
+        println!("addr: {:#x}",addr );
+        println!("count: {}",count);
+
+    };
+
 }
