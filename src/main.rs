@@ -24,6 +24,7 @@ use std::str;
 use std::str::FromStr;
 use std::process;
 use std::mem;
+use std::thread;
 use std::ptr;
 use std::env;
 use std::io;
@@ -63,7 +64,7 @@ fn main() {
 
     //Declarations for address search
     let mut pid: pid_t = -1;
-    let mut possible_addrs: &mut HashMap<i32,i32> = &mut HashMap::new();
+    let mut possible_addrs: HashMap<i32,i32> = HashMap::new();
 
     //Start search hotfix variable
     let mut start_search = false;
@@ -71,24 +72,18 @@ fn main() {
     let discord = log_into_discord(YOUR_TOKEN);
     let (mut connection, _) = discord.connect().expect("connect failed");
 
-    let mut discord_closure  = || dispatch_on_event(&discord, &mut connection);
+    let mut discord_closure  = move || dispatch_on_event(&discord, &mut connection);
 
-    let mut rl_score_closure = || rl_score_check(0x2cc42d5c, possible_addrs, pid);
+    let mut rl_score_closure = move || rl_score_check(0x2cc42d5c, &mut possible_addrs, pid);
 
     println!("Ready.");
-    loop {
-        println!("looping {}",start_search);
+    println!("looping {}",start_search);
 
-        if !start_search { 
-            discord_closure();
-        } else {
-            rl_score_closure();
-        }
+    let discord_handle = thread::spawn(discord_closure);
+    let score_handle = thread::spawn(rl_score_closure);
 
-
-    }
-
-
+    discord_handle.join().unwrap();
+    score_handle.join().unwrap();
 }
 
 /// Fetch pid of Rocket League
@@ -111,33 +106,36 @@ fn log_into_discord(token: &str) -> Discord {
 
 /// Function listens for events on the voice channel and runs functions in response.
 fn dispatch_on_event(discord: &Discord, connection: &mut Connection) {
+    loop{
+        println!("Running dispatch thread.");
 
-    //Initialzing username and channel from environment variables
-    let username: &str  = &env::var(DISCORD_NAME).unwrap();
-    let channel_name: &str = &env::var(DISCORD_CHANNEL).unwrap();
-    let discord_info = DiscordInfo { username: username, channel: channel_name};
+        //Initialzing username and channel from environment variables
+        let username: &str  = &env::var(DISCORD_NAME).unwrap();
+        let channel_name: &str = &env::var(DISCORD_CHANNEL).unwrap();
+        let discord_info = DiscordInfo { username: username, channel: channel_name};
 
-    //Print statements for debugging
-    println!("{:?}", username);
-    println!("{:?}", channel_name);
+        //Print statements for debugging
+        println!("{:?}", username);
+        println!("{:?}", channel_name);
 
-    //Initializing state variables
-    let mut discord_state = DiscordState { bot_in_channel: &mut false, channel_id: &mut None, user_in_channel: &mut false, user_in_game: &mut false};
+        //Initializing state variables
+        let mut discord_state = DiscordState { bot_in_channel: &mut false, channel_id: &mut None, user_in_channel: &mut false, user_in_game: &mut false};
 
-    match connection.recv_event() {
-        
-        Ok(Event::VoiceStateUpdate(server_opt, voice_state)) => voice_channel_update_event(discord, connection, &server_opt, &voice_state, &discord_info, &mut discord_state),
+        match connection.recv_event() {
+            
+            Ok(Event::VoiceStateUpdate(server_opt, voice_state)) => voice_channel_update_event(discord, connection, &server_opt, &voice_state, &discord_info, &mut discord_state),
 
-        Ok(Event::PresenceUpdate{presence, server_id, roles}) => game_state_update_event(discord, connection, presence, &server_id, &roles, &discord_info, &mut discord_state),
+            Ok(Event::PresenceUpdate{presence, server_id, roles}) => game_state_update_event(discord, connection, presence, &server_id, &roles, &discord_info, &mut discord_state),
 
-        Ok(_) => {}
-        
-        Err(discord::Error::Closed(code, body)) => {
-            println!("Gateway closed on us with code {:?}: {}", code, body);
-            process::exit(1);
-        },
+            Ok(_) => {}
+            
+            Err(discord::Error::Closed(code, body)) => {
+                println!("Gateway closed on us with code {:?}: {}", code, body);
+                process::exit(1);
+            },
 
-        Err(err) => println!("Receive error: {:?}", err)
+            Err(err) => println!("Receive error: {:?}", err)
+        }
     }
 }
 
@@ -229,53 +227,55 @@ fn check_state_and_join_channel(connection: &mut Connection, server: &Option<Ser
 /// Loop to check score in Rocket League
 fn rl_score_check(start_addr: i32, addrs_map: & mut HashMap<i32,i32>, mut pid: pid_t) {
 
-    if(pid == -1){
-        pid = fetch_rl_pid(pid);
-    }
+    loop {
+        println!("Running address thread.");
+        if(pid == -1){
+            pid = fetch_rl_pid(pid);
+        }
 
-    unsafe{
+        unsafe{
 
-        // Start address for guessing
-        let mut addr = start_addr;
+            // Start address for guessing
+            let mut addr = start_addr;
 
-        let mut count = 0u32;
+            let mut count = 0u32;
 
-        // Loop to check each address
-        for x in 0..100000 {
+            // Loop to check each address
+            for x in 0..100000 {
 
-            addr = addr + 1;
-            let mut value:i32 = mem::uninitialized();
-            let local_iov = iovec {
-            iov_base: &mut value as *mut _ as *mut c_void,
-            iov_len: mem::size_of::<i32>(),
-            };
-            let remote_iov = iovec {
-            iov_base: addr as *mut c_void,
-            iov_len: mem::size_of::<i32>(),
-            };
+                addr = addr + 1;
+                let mut value:i32 = mem::uninitialized();
+                let local_iov = iovec {
+                iov_base: &mut value as *mut _ as *mut c_void,
+                iov_len: mem::size_of::<i32>(),
+                };
+                let remote_iov = iovec {
+                iov_base: addr as *mut c_void,
+                iov_len: mem::size_of::<i32>(),
+                };
 
-            let read = process_vm_readv(pid, &local_iov, 1, &remote_iov, 1, 0);
+                let read = process_vm_readv(pid, &local_iov, 1, &remote_iov, 1, 0);
 
-            let  val = *addrs_map.entry(addr).or_insert(value);
+                let  val = *addrs_map.entry(addr).or_insert(value);
 
-            if val != i32::max_value() && val+1 == value{
-                //println!("We have a goal? {}",addr);
-                *addrs_map.entry(addr).or_insert(value);
-                count = count + 1;
+                if val != i32::max_value() && val+1 == value{
+                    //println!("We have a goal? {}",addr);
+                    *addrs_map.entry(addr).or_insert(value);
+                    count = count + 1;
+                } 
+
+                // Comment back in when debugging. Pipe to file for better viewing
+                 
+                //println!("addr: {:#x}",addr );
+                //println!("value: {}",value );
+                //println!("read: {}",read );
+                
+
             } 
+            //io::stdout().flush().unwrap();
+            println!("addr: {:#x}",addr );
+            println!("count: {}",count);
 
-            // Comment back in when debugging. Pipe to file for better viewing
-             
-            //println!("addr: {:#x}",addr );
-            //println!("value: {}",value );
-            //println!("read: {}",read );
-            
-
-        } 
-        //io::stdout().flush().unwrap();
-        println!("addr: {:#x}",addr );
-        println!("count: {}",count);
-
-    };
-
+        };
+    }
 }
