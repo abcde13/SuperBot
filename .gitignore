@@ -3,3 +3,4 @@ target
 srun
 *.rustfmt
 Cargo.lock
+users.yml
