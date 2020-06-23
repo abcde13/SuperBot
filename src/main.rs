@@ -5,7 +5,7 @@ use dynamic_bot::DynamicBot;
 
 fn main() 
 {
-    let bot = DynamicBot::new();
-    let bot = bot.login("neji49".to_string(), "test".to_string(), "".to_string());
-    bot.listen_respond_logout();
+    let bot = DynamicBot::new("config.yml".to_string());
+    let bot = bot.login();
+    bot.listen_respond();
 }
