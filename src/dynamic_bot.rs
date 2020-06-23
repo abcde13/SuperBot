@@ -8,7 +8,7 @@ use crate::api::api::ApiMessage::{User, LogoutWithToken, Logout};
 
 impl DynamicBot
 {
-    //Constructor returns LoggedOutDBot with registered user list
+    ///Constructor returns LoggedOutDBot with registered user list
     pub fn new(config_path: String) -> LoggedOutDBot
     {
         let yaml_string: String= fs::read_to_string(&config_path)
@@ -17,7 +17,7 @@ impl DynamicBot
         dbot
     }
 
-    //Listens for users to login from api and returns music
+    ///Listens for users to login from api and returns music
     pub fn listen_respond_logout(self) -> Result<LoggedOutDBot, String>
     {
         loop
@@ -43,7 +43,7 @@ impl DynamicBot
 
 impl LoggedOutDBot
 {
-    //Login function returns usable dbot 
+    ///Login function returns usable dbot 
     pub fn login(self) -> DynamicBot
     {
         let api = DiscordApi::new(self.token);
@@ -52,14 +52,14 @@ impl LoggedOutDBot
     }
 }
 
-//DynamicBot stores HashMap of users and their music and api
+///DynamicBot stores HashMap of users and their music and api
 pub struct DynamicBot
 {
     users: HashMap<String, String>,
     api: DiscordApi,
 }
 
-//LoggedOutDBot stores hashmap of registered users and config data.
+///LoggedOutDBot stores hashmap of registered users and config data.
 #[derive(Serialize, Deserialize)]
 pub struct LoggedOutDBot
 {
@@ -67,9 +67,9 @@ pub struct LoggedOutDBot
     token: String, 
 }
 
-//Private function accesses internal hashmap along with default value
 impl DynamicBot
 {
+    ///Private function accesses internal hashmap along with default value
     fn get_music(&self, user: String) -> String
     {
         match self.users.get(&user)

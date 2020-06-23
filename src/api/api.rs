@@ -12,6 +12,7 @@ pub enum ApiMessage
 
 impl DiscordApi
 {
+    ///Logs into discord using token
     pub fn new(token: String) -> DiscordApi
     {
         let local_token = token.clone();
@@ -23,6 +24,7 @@ impl DiscordApi
         api
     }
 
+    ///Blocking function waits for response for api
     pub fn recieve_response(&self) -> ApiMessage
     {
         match self.api_rx.recv().unwrap()
@@ -36,6 +38,7 @@ impl DiscordApi
         }
     }
 
+    ///Sends music file or youtube url to api
     pub fn send_music(&self, music: String)
     {
         self.music_tx.send(music).expect("Unable to send music through api");
