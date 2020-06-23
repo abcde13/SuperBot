@@ -3,8 +3,8 @@ use std::collections::HashMap;
 
 use serde::{Serialize, Deserialize};
 
-use crate::internal_api::InternalApi;
-use crate::internal_api::ApiMessage::{User, Logout};
+use crate::api::api::DiscordApi;
+use crate::api::api::ApiMessage::{User, LogoutWithToken, Logout};
 
 impl DynamicBot
 {
@@ -18,7 +18,7 @@ impl DynamicBot
     }
 
     //Listens for users to login from api and returns music
-    pub fn listen_respond(&self) 
+    pub fn listen_respond_logout(self) -> Result<LoggedOutDBot, String>
     {
         loop
         {
@@ -30,16 +30,14 @@ impl DynamicBot
                     println!("{}", music);
                     self.api.send_music(music);
                 },
-                Logout() => break
+                LogoutWithToken(token) => 
+                {
+                    let bot = LoggedOutDBot{users: self.users, token: token};
+                    return Ok(bot);
+                },
+                Logout() => return Err("Couldn't recover token".to_string()),
             }
         }
-    }
-
-    //Logs out Dbot
-    pub fn logout(self) -> LoggedOutDBot
-    {
-        let bot = LoggedOutDBot{users: self.users, token: self.api.close()};
-        bot
     }
 }
 
@@ -48,7 +46,7 @@ impl LoggedOutDBot
     //Login function returns usable dbot 
     pub fn login(self) -> DynamicBot
     {
-        let api = InternalApi::new(self.token);
+        let api = DiscordApi::new(self.token);
         let bot = DynamicBot{users: self.users, api: api};
         bot
     }
@@ -58,7 +56,7 @@ impl LoggedOutDBot
 pub struct DynamicBot
 {
     users: HashMap<String, String>,
-    api: InternalApi,
+    api: DiscordApi,
 }
 
 //LoggedOutDBot stores hashmap of registered users and config data.

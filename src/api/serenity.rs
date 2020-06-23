@@ -1,71 +1,19 @@
-use std::thread;
 use std::sync::mpsc;
 
-type Tx = mpsc::Sender<ApiMessage>;
-type Rx = mpsc::Receiver<ApiMessage>;
+use super::api::ApiMessage;
 
-type MTx = mpsc::Sender<String>;
-type MRx = mpsc::Receiver<String>;
+//Typedefs for mpsc channels
+pub type Tx = mpsc::Sender<ApiMessage>;
+pub type Rx = mpsc::Receiver<ApiMessage>;
 
-pub struct InternalApi
+pub type MTx = mpsc::Sender<String>;
+pub type MRx = mpsc::Receiver<String>;
+
+///Spawns external api and waits for close signal
+pub fn spawn_api(token: String, user_tx: Tx, music_rx: MRx)
 {
-    token: String,
-    api_rx: Rx,
-    music_tx: MTx,
-    close_tx: Tx,
-}
+    let (close_tx, close_rx) = mpsc::channel::<ApiMessage>();
 
-pub enum ApiMessage
-{
-    User(String),
-    Logout(),
-}
-
-impl InternalApi
-{
-    pub fn new(token: String) -> InternalApi
-    {
-        let local_token = token.clone();
-        let (api_tx, api_rx) = mpsc::channel::<ApiMessage>();
-        let (music_tx, music_rx) = mpsc::channel::<String>();
-        let (close_tx, close_rx) = mpsc::channel::<ApiMessage>();
-        thread::spawn(move || spawn_api(token, api_tx, music_rx, close_rx));
-        let api = InternalApi{token: local_token, 
-            api_rx: api_rx, music_tx: music_tx, close_tx: close_tx};
-        api
-    }
-
-    pub fn recieve_response(&self) -> ApiMessage
-    {
-        match self.api_rx.recv().unwrap()
-        {
-            ApiMessage::User(name) =>
-            {
-                return ApiMessage::User(name.to_string());
-            },
-            ApiMessage::Logout() => return ApiMessage::Logout()
-        }
-    }
-
-    pub fn send_music(&self, music: String)
-    {
-        self.music_tx.send(music).expect("Unable to send music through api");
-    }
-
-    pub fn close(self) -> String
-    {
-        match self.close_tx.send(ApiMessage::Logout())
-        {
-            Ok(_msg) => (),
-            Err(_msg) => println!("{}", "Api closed before signal"),
-        }
-        self.token.clone()
-    }
-}
-
-//Spawns external api and waits for close signal
-fn spawn_api(token: String, user_tx: Tx, music_rx: MRx, close_rx: Rx)
-{
     // Configure the client with your Discord bot token in the environment.
     let mut client = Client::new(&token, Handler).expect("Err creating client");
 
@@ -77,6 +25,7 @@ fn spawn_api(token: String, user_tx: Tx, music_rx: MRx, close_rx: Rx)
         data.insert::<VoiceManager>(Arc::clone(&client.voice_manager));
         data.insert::<ApiSender>(Arc::new(Mutex::new(user_tx)));
         data.insert::<MusicReceiver>(Arc::new(Mutex::new(music_rx)));
+        data.insert::<CloseSender>(Arc::new(Mutex::new(close_tx)));
     }
 
     client.with_framework(StandardFramework::new()
@@ -106,7 +55,7 @@ use serenity::{
     Result as SerenityResult,
 };
 
-//Definitions for data to send to Rust api
+//Definitions for data to send to Serenity api
 struct VoiceManager;
 
 impl TypeMapKey for VoiceManager {
@@ -127,7 +76,14 @@ impl TypeMapKey for  MusicReceiver{
     type Value = Arc<Mutex<MRx>>;
 }
 
+struct CloseSender;
 
+impl TypeMapKey for CloseSender {
+    type Value = Arc<Mutex<Tx>>;
+}
+
+
+//Event Listeners
 struct Handler;
 
 impl EventHandler for Handler {
@@ -171,8 +127,9 @@ impl AudioReceiver for Receiver {
     }
 }
 
+
 #[group]
-#[commands(join, leave)]
+#[commands(join, leave, logout)]
 struct General;
 
 #[command]
@@ -233,6 +190,36 @@ fn leave(ctx: &mut Context, msg: &Message) -> CommandResult {
     }
     Ok(())
 }
+
+#[command]
+fn logout(ctx: &mut Context, _msg: &Message) -> CommandResult {
+    let close_tx = ctx.data.read().get::<CloseSender>().cloned().unwrap();
+    let close_tx = close_tx.lock();
+    match close_tx.send(ApiMessage::Logout())
+    {
+        Ok(_msg) => (),
+        Err(_msg) => 
+        {
+            println!("{}", "Unable to send serenity close signal."); 
+        }
+    }
+
+    let api_tx = ctx.data.read().get::<ApiSender>().cloned().unwrap();
+    let api_tx = api_tx.lock();
+    match api_tx.send(ApiMessage::Logout())
+    {
+        Ok(_msg) => (),
+        Err(_msg) => 
+        {
+            println!("{}","Unable to send DynamicBot logout signal");
+        }
+    }
+
+    Ok(())
+}
+
+
+//Helper functions
 
 /// Checks that a message successfully sent; if not, then logs why to stdout.
 fn check_msg(result: SerenityResult<Message>) {
