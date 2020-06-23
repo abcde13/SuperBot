@@ -25,7 +25,9 @@ impl DynamicBot
             match self.api.recieve_response()
             {
                 User(name) => {
+                    println!("{}", name);
                     let music = self.get_music(name);
+                    println!("{}", music);
                     self.api.send_music(music);
                 },
                 Logout() => break

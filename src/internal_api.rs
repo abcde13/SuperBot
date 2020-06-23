@@ -97,7 +97,8 @@ use serenity::{
     },
     model::{channel::Message, gateway::Ready, id::ChannelId, misc::Mentionable},
     prelude::*,
-    voice::AudioReceiver,
+    voice::{AudioReceiver, LockedAudio, ytdl},
+    voice::Handler as VoiceHandler,
     Result as SerenityResult,
 };
 
@@ -109,12 +110,14 @@ impl TypeMapKey for VoiceManager {
 }
 
 struct ApiSender;
+type ApiSenderType = Arc<Mutex<Tx>>;
 
 impl TypeMapKey for ApiSender {
     type Value = Arc<Mutex<Tx>>;
 }
 
 struct MusicReceiver;
+type MusicReceiverType = Arc<Mutex<MRx>>;
 
 impl TypeMapKey for  MusicReceiver{
     type Value = Arc<Mutex<MRx>>;
@@ -129,11 +132,30 @@ impl EventHandler for Handler {
     }
 }
 
-struct Receiver;
+struct Receiver
+{
+    handler: VoiceHandler,
+    api_tx: ApiSenderType,
+    music_rx: MusicReceiverType,
+}
+
+impl Receiver
+{
+    fn new(handler: VoiceHandler, 
+           api_tx: ApiSenderType, music_rx: MusicReceiverType) -> Self
+    {
+        Self{handler: handler, api_tx: api_tx, music_rx: music_rx}
+    }
+}
 
 impl AudioReceiver for Receiver {
     fn client_connect(&mut self, _ssrc: u32, _user_id: u64) {
-        println!("{} is connected!", _user_id);
+        let api = self.api_tx.lock();
+        api.send(ApiResponse::User(_user_id.to_string()));
+        let response = self.music_rx.lock();
+        let music_url = response.recv().unwrap();
+        let music = ytdl(&music_url).unwrap();
+        self.handler.play(music);
     }
 }
 
@@ -164,10 +186,11 @@ fn join(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
     let manager_lock = ctx.data.read().get::<VoiceManager>().cloned()
         .expect("Expected VoiceManager in ShareMap.");
     let mut manager = manager_lock.lock();
+    let api_tx = ctx.data.read().get::<ApiSender>().cloned().unwrap();
+    let music_rx = ctx.data.read().get::<MusicReceiver>().cloned().unwrap();
 
     if let Some(handler) = manager.join(guild_id, connect_to) {
-        handler.listen(Some(Box::new(Receiver{})));
-        check_msg(msg.channel_id.say(&ctx.http, &format!(";;join")));
+        handler.listen(Some(Box::new(Receiver::new(handler.clone(), api_tx, music_rx))));
     } else {
         check_msg(msg.channel_id.say(&ctx.http, "Error joining the channel"));
     }
@@ -193,8 +216,6 @@ fn leave(ctx: &mut Context, msg: &Message) -> CommandResult {
 
     if has_handler {
         manager.remove(guild_id);
-
-        check_msg(msg.channel_id.say(&ctx.http,";;leave"));
     } else {
         check_msg(msg.reply(&ctx, "Not in a voice channel"));
     }
