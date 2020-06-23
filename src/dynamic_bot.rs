@@ -1,18 +1,18 @@
 use std::fs;
 use std::collections::HashMap;
-use std::sync::mpsc;
+
 use serde::{Serialize, Deserialize};
 
 use crate::internal_api::InternalApi;
-use crate::internal_api::ApiResponse::{User, Logout};
+use crate::internal_api::ApiMessage::{User, Logout};
 
 impl DynamicBot
 {
     //Constructor returns LoggedOutDBot with registered user list
     pub fn new(config_path: String) -> LoggedOutDBot
     {
-        let yaml_string: String= fs::read_to_string(config_path)
-            .expect("Couldn't open file");
+        let yaml_string: String= fs::read_to_string(&config_path)
+            .expect(&format!("Couldn't open {}", &config_path));
         let dbot: LoggedOutDBot = serde_yaml::from_str(&yaml_string).unwrap();
         dbot
     }
@@ -69,7 +69,7 @@ pub struct LoggedOutDBot
     token: String, 
 }
 
-//Private function accesses internal hashmap
+//Private function accesses internal hashmap along with default value
 impl DynamicBot
 {
     fn get_music(&self, user: String) -> String
@@ -77,7 +77,7 @@ impl DynamicBot
         match self.users.get(&user)
         {
             Some(music) => return music.to_string(),
-            _ => return "A New Challenger".to_string(),
+            _ => return "https://www.youtube.com/watch?v=J87xZuMdrKQ".to_string(),
         }
     }
 }

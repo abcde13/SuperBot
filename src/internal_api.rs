@@ -1,8 +1,8 @@
 use std::thread;
 use std::sync::mpsc;
 
-type Tx = mpsc::Sender<ApiResponse>;
-type Rx = mpsc::Receiver<ApiResponse>;
+type Tx = mpsc::Sender<ApiMessage>;
+type Rx = mpsc::Receiver<ApiMessage>;
 
 type MTx = mpsc::Sender<String>;
 type MRx = mpsc::Receiver<String>;
@@ -15,7 +15,7 @@ pub struct InternalApi
     close_tx: Tx,
 }
 
-pub enum ApiResponse
+pub enum ApiMessage
 {
     User(String),
     Logout(),
@@ -26,35 +26,39 @@ impl InternalApi
     pub fn new(token: String) -> InternalApi
     {
         let local_token = token.clone();
-        let (api_tx, api_rx) = mpsc::channel::<ApiResponse>();
+        let (api_tx, api_rx) = mpsc::channel::<ApiMessage>();
         let (music_tx, music_rx) = mpsc::channel::<String>();
-        let (close_tx, close_rx) = mpsc::channel::<ApiResponse>();
+        let (close_tx, close_rx) = mpsc::channel::<ApiMessage>();
         thread::spawn(move || spawn_api(token, api_tx, music_rx, close_rx));
         let api = InternalApi{token: local_token, 
             api_rx: api_rx, music_tx: music_tx, close_tx: close_tx};
         api
     }
 
-    pub fn recieve_response(&self) -> ApiResponse
+    pub fn recieve_response(&self) -> ApiMessage
     {
         match self.api_rx.recv().unwrap()
         {
-            ApiResponse::User(name) =>
+            ApiMessage::User(name) =>
             {
-                return ApiResponse::User(name.to_string());
+                return ApiMessage::User(name.to_string());
             },
-            ApiResponse::Logout() => return ApiResponse::Logout()
+            ApiMessage::Logout() => return ApiMessage::Logout()
         }
     }
 
     pub fn send_music(&self, music: String)
     {
-        self.music_tx.send(music);
+        self.music_tx.send(music).expect("Unable to send music through api");
     }
 
     pub fn close(self) -> String
     {
-        self.close_tx.send(ApiResponse::Logout());
+        match self.close_tx.send(ApiMessage::Logout())
+        {
+            Ok(_msg) => (),
+            Err(_msg) => println!("{}", "Api closed before signal"),
+        }
         self.token.clone()
     }
 }
@@ -80,11 +84,11 @@ fn spawn_api(token: String, user_tx: Tx, music_rx: MRx, close_rx: Rx)
             .prefix("~"))
         .group(&GENERAL_GROUP));
     let _ = client.start().map_err(|why| println!("Client ended: {:?}", why));
-    let signal = close_rx.recv().unwrap();
+    close_rx.recv().unwrap();
 }
 
 //Api code at the bottom to allow for easy removal
-use std::{env, sync::Arc};
+use std::sync::Arc;
 
 use serenity::{
     client::{bridge::voice::ClientVoiceManager, Client, Context, EventHandler},
@@ -95,9 +99,9 @@ use serenity::{
             macros::{command, group},
         },
     },
-    model::{channel::Message, gateway::Ready, id::ChannelId, misc::Mentionable},
+    model::{channel::Message, gateway::Ready, id::ChannelId},
     prelude::*,
-    voice::{AudioReceiver, LockedAudio, ytdl},
+    voice::{AudioReceiver, ytdl},
     voice::Handler as VoiceHandler,
     Result as SerenityResult,
 };
@@ -151,7 +155,15 @@ impl Receiver
 impl AudioReceiver for Receiver {
     fn client_connect(&mut self, _ssrc: u32, _user_id: u64) {
         let api = self.api_tx.lock();
-        api.send(ApiResponse::User(_user_id.to_string()));
+        match api.send(ApiMessage::User(_user_id.to_string()))
+        {
+            Ok(_msg) => (),
+            Err(_msg) => 
+            {
+                println!("{}", format!("Unable to send {} through api", 
+                                       _user_id.to_string()))
+            }
+        }
         let response = self.music_rx.lock();
         let music_url = response.recv().unwrap();
         let music = ytdl(&music_url).unwrap();
