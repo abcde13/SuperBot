@@ -16,14 +16,15 @@ you can try these instructions but they're not particularly robust.
 You need to have youtube-dl working from the command line. I use linux so
 this is easy with the package manager but you'll need to figure out how to 
 do so on other platforms. This is the [project](https://github.com/ytdl-org/youtube-dl).
-youtube 
+youtube.
+
 Use [this](https://discordpy.readthedocs.io/en/latest/discord.html) tutorial to set up the discord bot.
 
 Download the project and create a yaml file called config.yml in the top level directory. The file should looke like this
 
-token: sdkfjdkjfdkfjd
-users:
-  12323232323:<youtube link>
+token: sdkfjdkjfdkfjd\
+users:\
+>  12323232323:"youtube link"
   
 The bot needs a user id, the user name won't work(like I said, poor usability)
 
