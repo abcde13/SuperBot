@@ -20,11 +20,8 @@ youtube.
 
 Use [this](https://discordpy.readthedocs.io/en/latest/discord.html) tutorial to set up the discord bot.
 
-Download the project and create a yaml file called config.yml in the top level directory. The file should looke like this
-
-token: sdkfjdkjfdkfjd\
-users:\
->  12323232323:"youtube link"
+Download the project and create a yaml file called config.yml in the top level directory.
+You can use the sample as an example.
   
 The bot needs a user id, the user name won't work(like I said, poor usability)
 
