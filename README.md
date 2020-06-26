@@ -21,7 +21,7 @@ youtube.
 Use [this](https://discordpy.readthedocs.io/en/latest/discord.html) tutorial to set up the discord bot.
 
 Download the project and create a yaml file called config.yml in the top level directory.
-You can use the sample as an example.
+You can use the sample as an example, but you should remove the sample extension.
   
 The bot needs a user id, the user name won't work(like I said, poor usability)
 
