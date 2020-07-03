@@ -16,7 +16,6 @@ you can try these instructions but they're not particularly robust.
 You need to have youtube-dl working from the command line. I use linux so
 this is easy with the package manager but you'll need to figure out how to 
 do so on other platforms. This is the [project](https://github.com/ytdl-org/youtube-dl).
-youtube.
 
 Use [this](https://discordpy.readthedocs.io/en/latest/discord.html) tutorial to set up the discord bot.
 
