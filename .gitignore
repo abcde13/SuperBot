@@ -2,3 +2,5 @@ target
 *.swp
 srun
 *.rustfmt
+Cargo.lock
+config.yml
